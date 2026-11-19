@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Agendar Cita - Estudio 14 by Cris</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #121212;
+      color: #ffffff;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 20px;
+      border: 6px solid rgba(212, 175, 55, 0.35);
+    }
+    .contenedor {
+      background-color: #1e1e1e;
+      padding: 32px;
+      border-radius: 14px;
+      box-shadow: 0 10px 28px rgba(0, 0, 0, 0.7), 0 0 18px rgba(212, 175, 55, 0.25);
+      width: 100%;
+      max-width: 410px;
+      border: 2px solid #d4af37;
+    }
+    h1 {
+      text-align: center;
+      color: #d4af37;
+      font-size: 26px;
+      letter-spacing: 2px;
+      margin-bottom: 4px;
+      text-transform: uppercase;
+    }
+    p.subtitulo {
+      text-align: center;
+      color: #d4af37;
+      font-size: 14px;
+      margin-bottom: 24px;
+      opacity: 0.9;
+    }
+    label {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 14px;
+      color: #dddddd;
+      font-weight: 500;
+    }
+    input, select {
+      width: 100%;
+      padding: 12px;
+      margin-bottom: 18px;
+      background-color: #2c2c2c;
+      border: 1px solid #444444;
+      border-radius: 6px;
+      color: #ffffff;
+      font-size: 15px;
+      outline: none;
+      transition: border-color 0.3s, box-shadow 0.3s;
+    }
+    input:focus, select:focus {
+      border-color: #d4af37;
+      box-shadow: 0 0 8px rgba(212, 175, 55, 0.3);
+    }
+    select option {
+      background-color: #2c2c2c;
+      color: #ffffff;
+    }
+    button {
+      width: 100%;
+      padding: 14px;
+      background-color: #d4af37;
+      color: #121212;
+      border: none;
+      border-radius: 6px;
+      font-size: 16px;
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      cursor: pointer;
+      transition: background-color 0.3s, transform 0.1s;
+    }
+    button:hover {
+      background-color: #e5c158;
+    }
+    button:active {
+      transform: scale(0.98);
+    }
+    button:disabled {
+      opacity: 0.65;
+      cursor: not-allowed;
+    }
+  </style>
+</head>
+<body>
+  <div class="contenedor">
+    <h1>Estudio 14 by Cris</h1>
+    <p class="subtitulo">Reserva tu lugar</p>
+    
+    <form id="formCita">
+      <label for="nombre">Nombre completo:</label>
+      <input type="text" id="nombre" placeholder="Ej. Carlos Mendoza" required>
+      
+      <label for="telefono">Teléfono / WhatsApp:</label>
+      <input type="tel" id="telefono" placeholder="Ej. 314 123 4567" required>
+      
+      <label for="servicio">Servicio:</label>
+      <select id="servicio" required>
+        <option value="" disabled selected>Selecciona un servicio...</option>
+        <option value="Corte - $120">Corte — $120</option>
+        <option value="Corte y ceja - $130">Corte y ceja — $130</option>
+        <option value="Corte y barba - $140">Corte y barba — $140</option>
+        <option value="Corte, barba y ceja - $150">Corte, barba y ceja — $150</option>
+      </select>
+      
+      <label for="fecha">Fecha:</label>
+      <input type="date" id="fecha" required>
+      
+      <label for="hora">Hora:</label>
+      <input type="time" id="hora" required>
+      
+      <button type="submit" id="btnAgendar">Agendar Cita</button>
+    </form>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js';
+    import { getFirestore, collection, addDoc, query, where, getDocs } from 'https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js';
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyA9ET9hafApy22GKWe8J0sxtABe9i2u9D0",
+      authDomain: "estudio-14-by-cris.firebaseapp.com",
+      projectId: "estudio-14-by-cris",
+      storageBucket: "estudio-14-by-cris.firebasestorage.app",
+      messagingSenderId: "981768806514",
+      appId: "1:981768806514:web:f7450b6d016ab534c222eb"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    const form = document.getElementById('formCita');
+    const inputNombre = document.getElementById('nombre');
+    const inputTelefono = document.getElementById('telefono');
+    const inputServicio = document.getElementById('servicio');
+    const inputFecha = document.getElementById('fecha');
+    const inputHora = document.getElementById('hora');
+    const btnAgendar = document.getElementById('btnAgendar');
+
+    function horaAMinutos(horaStr) {
+      if (!horaStr || !horaStr.includes(':')) return null;
+      const [h, m] = horaStr.split(':').map(Number);
+      return h * 60 + m;
+    }
+
+    inputFecha.addEventListener('change', (e) => {
+      if (!e.target.value) return;
+      const fechaObj = new Date(e.target.value + 'T00:00:00');
+      // 6 = Sábado
+      if (fechaObj.getDay() === 6) {
+        alert('Los sábados no tenemos servicio. Por favor selecciona otro día.');
+        e.target.value = '';
+      }
+    });
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const nombre = inputNombre.value.trim();
+      const telefono = inputTelefono.value.trim();
+      const servicio = inputServicio.value;
+      const fecha = inputFecha.value;
+      const hora = inputHora.value;
+
+      const fechaObj = new Date(fecha + 'T00:00:00');
+      if (fechaObj.getDay() === 6) {
+        alert('No está disponible este día porque los sábados descansamos. Elige otra fecha.');
+        inputFecha.value = '';
+        return;
+      }
+
+      const nuevaHoraMin = horaAMinutos(hora);
+      if (nuevaHoraMin === null) {
+        alert('Por favor selecciona una hora válida.');
+        return;
+      }
+
+      btnAgendar.disabled = true;
+      btnAgendar.textContent = 'Verificando horario...';
+
+      try {
+        const citasRef = collection(db, 'citas');
+        const consulta = query(citasRef, where('fecha', '==', fecha));
+        const snapshot = await getDocs(consulta);
+
+        // Cada cita dura 1 hora (60 min): bloquea si hay otra cita a menos de 60 min
+        let hayEmpalme = false;
+        snapshot.forEach((doc) => {
+          const existenteMin = horaAMinutos(doc.data().hora);
+          if (existenteMin !== null && Math.abs(nuevaHoraMin - existenteMin) < 60) {
+            hayEmpalme = true;
+          }
+        });
+
+        if (hayEmpalme) {
+          alert('Este horario no está disponible porque ya hay una cita reservada dentro de esa hora. Por favor elige otro horario.');
+          btnAgendar.disabled = false;
+          btnAgendar.textContent = 'Agendar Cita';
+          return;
+        }
+
+        await addDoc(citasRef, {
+          nombre,
+          telefono,
+          servicio,
+          fecha,
+          hora
+        });
+
+        alert(
+          `Cita realizada con éxito.\n\n` +
+          `Hola ${nombre}, gracias por haber agendado tu cita en Estudio 14 by Cris.\n\n` +
+          `Detalles de tu cita:\n` +
+          `• Servicio: ${servicio}\n` +
+          `• Fecha: ${fecha}\n` +
+          `• Hora: ${hora}\n\n` +
+          `Nota importante: Para brindarte la mejor atención y respetar el tiempo de todos nuestros clientes, contamos con 10 minutos de tolerancia después de las ${hora}. Pasado ese tiempo, la cita se cancelará automáticamente.\n\n` +
+          `¡Te esperamos!`
+        );
+        form.reset();
+      } catch (error) {
+        console.error('Error al guardar:', error);
+        alert('Hubo un error al guardar la cita.');
+      } finally {
+        btnAgendar.disabled = false;
+        btnAgendar.textContent = 'Agendar Cita';
+      }
+    });
+  </script>
+</body>
+</html>
